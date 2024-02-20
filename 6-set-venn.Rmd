@@ -1,0 +1,82 @@
+---
+title: "6 set venn"
+author: "Tingying He"
+date: '2024-02-20'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 6-Set Venn 
+This script enables the creation of a 6-set Venn diagram. The required input data format consists of multiple columns (6 columns in this case), where each column represents a category (set) containing various values. The purpose of the Venn diagram is to illustrate the overlap of common values among the categories. This overlap indicates the number of common values shared by these categories. To accomplish this, we utilize the [venn](https://cran.r-project.org/web/packages/venn/index.html)  package, which supports the drawing of Venn diagrams for up to 7 sets.
+
+```{r}
+library(venn) # https://cran.r-project.org/web/packages/venn/index.html
+library(ggplot2)
+library(readxl)
+library(dplyr)
+```
+
+```{r}
+df <- read_excel(path = "data.xlsx") # Path to data
+df
+```
+
+```{r}
+# Rename columns
+df <- rename(df, top_26_atlas = `Top 26 Atlas`)
+df <- rename(df, mouse = `Mouse`)
+df <- rename(df, chicken = `Chicken`)
+df <- rename(df, goat = `Goat`)
+df <- rename(df, dog = `Dog`)
+df <- rename(df, guinea = `Guinea Pig`)
+
+df
+```
+
+
+```{r}
+# Combine all values, remove NAs, and find unique values
+all_values <- unlist(df[, c("top_26_atlas", "mouse", "chicken", "goat", "dog", "guinea")])
+all_values <- all_values[!is.na(all_values)] # Remove NA values
+all_values <- unique(all_values)
+
+# Create a new dataframe with unique values
+unique_df <- data.frame(unique_value = all_values)
+
+# Initialize the flag columns to 0
+flag_columns <- c("top_26_atlas_flag", "mouse_flag", "chicken_flag", "goat_flag", "dog_flag", "guinea_pig_flag")
+for(col in flag_columns) {
+  unique_df[[col]] <- 0
+}
+
+# Update the flag columns. For example, if a value is in column top_26_atlas, we change the value of top_26_atlas_flag of this row from 0 to 1.
+for(i in 1:nrow(unique_df)) {
+  unique_value <- unique_df$unique_value[i]
+  
+  unique_df$top_26_atlas_flag[i] <- as.integer(unique_value %in% df$top_26_atlas)
+  unique_df$mouse_flag[i] <- as.integer(unique_value %in% df$mouse)
+  unique_df$chicken_flag[i] <- as.integer(unique_value %in% df$chicken)
+  unique_df$goat_flag[i] <- as.integer(unique_value %in% df$goat)
+  unique_df$dog_flag[i] <- as.integer(unique_value %in% df$dog)
+  unique_df$guinea_pig_flag[i] <- as.integer(unique_value %in% df$guinea)
+}
+
+```
+
+
+```{r}
+# Select only the flag columns to create a new dataframe
+flags_df <- unique_df[, c("top_26_atlas_flag", "mouse_flag", "chicken_flag", "goat_flag", "dog_flag", "guinea_pig_flag")]
+```
+
+```{r}
+svg("vennnn.svg")
+
+venn(flags_df, ilabels = "counts", zcolor = "style", box = FALSE, plotsize = 50) # Venn plot
+
+dev.off()
+```
+
